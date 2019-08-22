@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <mule-project xmlns="http://www.mulesoft.com/tooling/project" runtimeId="org.mule.tooling.server.3.9.1.ee" schemaVersion="5.3.0.0">
-    <name>class1Tulsi</name>
+    <name>usecase1-sys-api</name>
     <description></description>
+    <muleExtension name="Mongo DB" qualifier="org.mule.tooling.ui.contribution.mongo.3.6.0"/>
 </mule-project>

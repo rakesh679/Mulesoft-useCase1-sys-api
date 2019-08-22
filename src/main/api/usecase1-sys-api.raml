@@ -1,0 +1,67 @@
+#%RAML 1.0
+baseUri: https://anypoint.mulesoft.com/mocking/api/v1/links/7d9298f7-0bbf-4069-aa69-e440c4914e03/ # 
+title: usecase1-sys-api
+
+version: v1
+traits:
+
+  client-credentials-required:
+    headers:
+      client_id:
+        type: string
+        example: 7b404180fbb84b099179a4126a9576ff
+      client_secret:
+        type: string
+        example: e241f4aa3eca4b2a8FA67A2FEF5754F8
+
+/countryIsoCode:
+  get:
+    queryParameters:
+      countryName:
+    description: Return a standard response.
+    is: [client-credentials-required]
+    responses:
+      200:
+        body:
+          application/json:
+            example: {
+              "countryIsoCode":"In"
+            }
+/countryInfo:
+  get:
+    queryParameters:
+      countryName:
+    description: Return a standard response.
+    is: [client-credentials-required]
+    responses:
+      200:
+        body:
+          application/json:
+            example: !include examples/get-response.json        
+/file:
+  put:
+    description: Return a standard response.
+    is: [client-credentials-required]
+    body:
+      application/json:
+        example: !include examples/put-request.json
+          
+    responses:
+      200:
+        body:
+          application/json:
+            example: !include examples/put-response.json 
+
+/dbInsert:
+  put:
+    description: Return a standard response.
+    is: [client-credentials-required]
+    body:
+      application/json:
+        example: !include examples/put-db-request.json
+          
+    responses:
+      200:
+        body:
+          application/json:
+            example: !include examples/put-db-response.json            

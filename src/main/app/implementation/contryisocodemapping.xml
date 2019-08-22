@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:ftp="http://www.mulesoft.org/schema/mule/ee/ftp" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:ws="http://www.mulesoft.org/schema/mule/ws" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:mongo="http://www.mulesoft.org/schema/mule/mongo" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ws http://www.mulesoft.org/schema/mule/ws/current/mule-ws.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/mongo http://www.mulesoft.org/schema/mule/mongo/current/mule-mongo.xsd
+http://www.mulesoft.org/schema/mule/ee/ftp http://www.mulesoft.org/schema/mule/ee/ftp/current/mule-ftp-ee.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd">
+    <ws:consumer-config name="Web_Service_Consumer" wsdlLocation="http://webservices.oorsprong.org/websamples.countryinfo/CountryInfoService.wso?wsdl" service="CountryInfoService" port="CountryInfoServiceSoap" serviceAddress="http://webservices.oorsprong.org/websamples.countryinfo/CountryInfoService.wso" doc:name="Web Service Consumer"/>
+    <mongo:config-connection-string name="Mongo_DB__Connection_String" connectionString="mongodb+srv://rakesh:112212Rk@cluster0-go4k9.mongodb.net/test?retryWrites=true&amp;w=majority" doc:name="Mongo DB: Connection String"/>
+    <flow name="get-countryIsoCode-flow">
+        <logger level="INFO" doc:name="Logger"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+%namespace ns0 http://www.oorsprong.org/websamples.countryinfo
+---
+{
+	ns0#CountryISOCode: {
+		ns0#sCountryName: capitalize inboundProperties."http.query.params".countryName
+	}
+}
+]]></dw:set-payload>
+        </dw:transform-message>
+        <ws:consumer config-ref="Web_Service_Consumer" operation="CountryISOCode" doc:name="Web Service Consumer"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="e03e1fa1-383c-402d-bcdd-9a3f9368cce0">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+%namespace ns0 http://www.oorsprong.org/websamples.countryinfo
+---
+{
+	countryIsoCode: payload.ns0#CountryISOCodeResponse.ns0#CountryISOCodeResult
+	
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="put-countryDetails-file-flow">
+        <logger level="INFO" doc:name="Logger"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+---
+{
+	result: payload
+}
+]]></dw:set-payload>
+        </dw:transform-message>
+        <async doc:name="Async">
+            <ftp:outbound-endpoint host="ftp.drivehq.com" port="21" path="/MuleResponseFile/" user="newFTPuser045" password="8145362394@ftp" passive="true" outputPattern="#[&quot;muleResponse&quot;+server.dateTime.format('YYYYMMddhhmmss')+&quot;.xml&quot;]" responseTimeout="10000" mimeType="application/xml" doc:name="FTP"/>
+        </async>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	"message":"Successfully inserted into file in xml format",
+	"successfulFlag":"yes"
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="put-countryinfo-db-flow">
+        <logger level="INFO" doc:name="Logger"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+
+        <async doc:name="Async">
+            <mongo:insert-document config-ref="Mongo_DB__Connection_String" collection="example" doc:name="Mongo DB"/>
+        </async>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	"message":"successfully inserted into db",
+	"successfulFlag":"yes"
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="get-countryDetailsFlow">
+        <logger level="INFO" doc:name="Logger"/>
+        <flow-ref name="get-countryIsoCode-flow" doc:name="get-countryIsoCode-flow"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+%namespace ns0 http://www.oorsprong.org/websamples.countryinfo
+---
+{
+	ns0#FullCountryInfo: {
+		ns0#sCountryISOCode: payload.countryIsoCode
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <ws:consumer config-ref="Web_Service_Consumer" operation="FullCountryInfo" doc:name="Web Service Consumer"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+%namespace ns0 http://www.oorsprong.org/websamples.countryinfo
+---
+{
+	ISOCode: payload.ns0#FullCountryInfoResponse.ns0#FullCountryInfoResult.ns0#sISOCode,
+	Name: payload.ns0#FullCountryInfoResponse.ns0#FullCountryInfoResult.ns0#sName,
+	CapitalCity: payload.ns0#FullCountryInfoResponse.ns0#FullCountryInfoResult.ns0#sCapitalCity,
+	PhoneCode: payload.ns0#FullCountryInfoResponse.ns0#FullCountryInfoResult.ns0#sPhoneCode,
+	ContinentCode: payload.ns0#FullCountryInfoResponse.ns0#FullCountryInfoResult.ns0#sContinentCode,
+	CurrencyISOCode: payload.ns0#FullCountryInfoResponse.ns0#FullCountryInfoResult.ns0#sCurrencyISOCode,
+	CountryFlag: payload.ns0#FullCountryInfoResponse.ns0#FullCountryInfoResult.ns0#sCountryFlag,
+	Languages: {
+		ISOCode: payload.ns0#FullCountryInfoResponse.ns0#FullCountryInfoResult.ns0#Languages.ns0#tLanguage.ns0#sISOCode,
+		Name: payload.ns0#FullCountryInfoResponse.ns0#FullCountryInfoResult.ns0#Languages.ns0#tLanguage.ns0#sName
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+</mule>
